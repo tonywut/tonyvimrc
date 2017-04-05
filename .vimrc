@@ -7,7 +7,9 @@ let mapleader=";"
 " 开启文件类型侦测
 filetype on
 " 根据侦测到的不同类型加载对应的插件
+filetype indent on
 filetype plugin on
+filetype plugin indent on
 
 " <<
 
@@ -15,14 +17,14 @@ filetype plugin on
 " vim 自身（非插件）快捷键
 
 " 设置快捷键将选中文本块复制至系统剪贴板
-vnoremap <Leader>y "+y
+"vnoremap <Leader>y "+y
 " 设置快捷键将系统剪贴板内容粘贴至vim
 nmap <Leader>p "+p
 nmap <Leader>P "+P
 
 " 设置快捷键遍历子窗口
 " 依次遍历
-nnoremap nw <C-W><C-W>
+nnoremap wn <C-W><C-W>
 " 跳转至右方的窗口
 nnoremap <Leader>lw <C-W>l
 " 跳转至方的窗口
@@ -124,6 +126,13 @@ Plugin 'Lokaltog/vim-easymotion'
 "Plugin 'suan/vim-instant-markdown'
 "中/英输入平滑切换
 "Plugin 'lilydjwg/fcitx.vim'
+Plugin 'ctrlpvim/ctrlp.vim'
+"ack 搜索
+Plugin 'mileszs/ack.vim'
+" ag.vim : Use ag, the_silver_searcher (better than ack, which is better than
+" grep) 
+Plugin 'rking/ag.vim' 
+"Plugin 'autopreview'
 " 插件列表结束
 call vundle#end()
 filetype plugin indent on
@@ -429,7 +438,7 @@ map <Leader>bl :MBEToggle<cr>
 " buffer 切换快捷键
 map <Leader>n :MBEbn<cr>
 map <C-Tab> :MBEbn<cr>
-map <Leader>p :MBEbp<cr>
+map <Leader>N :MBEbp<cr>
 map <C-S-Tab> :MBEbp<cr>
 "设置miniBufExpl
 let g:miniBufExplMapWindowNavVim = 1   
@@ -452,25 +461,25 @@ let g:Powerline_symbols = 'fancy'
 
 
 "==========================================================================
-map <leader>0 :call Dogtags()<cr>
-map <leader>9 :call Do_gtags_9()<cr>
+map <leader>0 :call Dogtags0()<cr>
+map <leader>9 :call Dogtags9()<cr>
 "ctags {{{
-function! Dogtags()
+function! Dogtags0()
 	if(DeleteFile(g:curpath, "gtags.files") )
 		return
 	endif
     silent! execute "!find . -path '.\/out' -o -type d -name '\.svn' -o -type d -name '\.git'  -prune  -o  -type f  > gtags.files"
     call Do_CsTag()
 endfunction
-function! Do_gtags_9()
+function! Dogtags9()
 	if(DeleteFile(g:curpath, "gtags.files") )
 		return
 	endif
-    silent! execute "!find vendor \( -path '.\/out' -o -type d -name '\.svn' -o -type d -name '\.git' \) -prune  -o  -type f  > gtags.files"
-    silent! execute "!find frameworks \( -path '.\/out' -o -type d -name '\.svn' -o -type d -name '\.git' \) -prune  -o  -type f  >> gtags.files"
-    silent! execute "!find packages \( -path '.\/out' -o -type d -name '\.svn' -o -type d -name '\.git' \) -prune  -o  -type f  >> gtags.files"
-    silent! execute "!find prebuilts \( -path '.\/out' -o -type d -name '\.svn' -o -type d -name '\.git' \) -prune  -o  -type f  >> gtags.files"
-    Do_CsTag()
+    silent! execute "!find vendor  -path '.\/out' -o -type d -name '\.svn' -o -type d -name '\.git'  -prune  -o  -type f  > gtags.files"
+    silent! execute "!find frameworks  -path '.\/out' -o -type d -name '\.svn' -o -type d -name '\.git'  -prune  -o  -type f  >> gtags.files"
+    silent! execute "!find packages -path '.\/out' -o -type d -name '\.svn' -o -type d -name '\.git'  -prune  -o  -type f  >> gtags.files"
+    silent! execute "!find prebuilts  -path '.\/out' -o -type d -name '\.svn' -o -type d -name '\.git'  -prune  -o  -type f  >> gtags.files"
+    call Do_CsTag()
 endfunction
 function! Do_CsTag()
 	cd g:curpath
@@ -570,66 +579,54 @@ endif " }}}
 
 
 " 预览窗口 
-"打开预览窗口显示当前函数的定义
-"nmap <F9> :belowright ptag <C-R>=expand("<cword>")<CR><CR>
-nmap <F9> :call MyPreviewWord("all")<CR>
-"关闭预览窗口
-nmap <C-F9> :pclose <CR>
-"nmap <F9> :call MyPreviewWord()<CR>
-set updatetime=2000
-"au! CursorHold *.* nested silent call MyPreviewWord("one")
-"MyPreviewWord() {{{
-function! MyPreviewWord(para)
-	if &previewwindow			" 不要在预览窗口里执行
-		return
-	endif
-	let l:edit_win=winnr()
-	let w = expand("<cword>")		" 在当前光标位置抓词
-	if w =~ '\a'			" 如果该单词包括一个字母
+nnoremap <Leader>v :call PreviewWord()<CR> 
+nnoremap <Leader>cv :pclose <CR>
+func! PreviewWord()
+  if &previewwindow			" don't do this in the preview window
+    return
+  endif
+  let w = expand("<cword>")		" get the word under cursor
+  if w =~ '\a'			" if the word contains a letter
 
-    " 在显示下一个标签之前，删除所有现存的语法高亮
-    silent! wincmd P			" 跳转至预览窗口
-    if &previewwindow		" 如果确实转到了预览窗口……
-		match none			" 删除语法高亮
-		exe l:edit_win . "wincmd w"
-		"wincmd p			" 回到原来的窗口
+    " Delete any existing highlight before showing another tag
+    silent! wincmd P			" jump to preview window
+    if &previewwindow			" if we really get there...
+      match none			" delete existing highlight
+      wincmd p			" back to old window
     endif
-	
-    let l:expr = '\<' . w . '\>' . '\C'
-	" Buffer caption for identifying myself among all the plugins
-	let s:SrcExpl_pluginCaption = 'Source_Explorer'
-	" We get the tag list of the expression
-	let l:list = taglist(l:expr)
-	" Then get the length of taglist
-	let l:len = len(l:list)
 
-    if l:len > 1 && a:para == "one"
-		return	
-	endif
-				
-    " 试着显示当前光标处匹配的标签
+    " Try displaying a matching tag for the word under the cursor
     try
-		exe "belowright ptag " . w
+        exe "belowright pedit"
     catch
-		return
+      return
     endtry
+    silent! wincmd P
+    if &previewwindow
+        try
+            exe "ptag " . w
+        catch
+          wincmd p
+          return
+        endtry
+        wincmd p
+    endif    
 
-    silent! wincmd P			" 跳转至预览窗口
-    if &previewwindow		" 如果确实转到了预览窗口……
-		if has("folding")
-			silent! .foldopen		" 展开折叠的行
-		endif
-		call search("$", "b")		" 到前一行的行尾
-		let w = substitute(w, '\\', '\\\\', "")
-		call search('\<\V' . w . '\>')	" 定位光标在匹配的单词上
-		" 给在此位置的单词加上匹配高亮
-		hi previewWord term=bold ctermbg=green guibg=green
-		exe 'match previewWord "\%' . line(".") . 'l\%' . col(".") . 'c\k*"'
-		"wincmd p			" 返回原来的窗口
-		exe l:edit_win . "wincmd w"
+    silent! wincmd P			" jump to preview window
+    if &previewwindow		" if we really get there...
+	 if has("folding")
+	   silent! .foldopen		" don't want a closed fold
+	 endif
+	 call search("$", "b")		" to end of previous line
+	 let w = substitute(w, '\\', '\\\\', "")
+	 call search('\<\V' . w . '\>')	" position cursor on match
+	 " Add a match highlight to the word at this position
+      hi previewWord term=bold ctermbg=green guibg=green
+	 exe 'match previewWord "\%' . line(".") . 'l\%' . col(".") . 'c\k*"'
+      wincmd p			" back to old window
     endif
   endif
-endfunction" }}}
+endfun
 
 
 "Save_Session() Read_Session(){{{
@@ -649,6 +646,7 @@ function! Save_Session()
 	"endif
     execute "cclose"
     execute "MBEClose"
+    execute "NERDTreeClose"
 	execute "mksession " .  g:session_file
 	execute "wviminfo " .  g:info_file 
 endfunction
@@ -667,6 +665,7 @@ endfunction
 "使用\q时保存vim状态与viminfo
 nmap <leader>q :call Save_Session()<CR>:qa<CR>
 "回复vim状态与viminfo
+
 if &diff
 	"比较模式不加载vim状态与viminfo
 	"将差异应用于对面窗口
@@ -742,8 +741,30 @@ function! CodeFormat()
     "返回先前光标所在行
     exec lineNum
 endfunction
-map <leader>f :call CodeFormat()<CR>
+map <leader>cf :call CodeFormat()<CR>
 
+
+" ctrlpvim/ctrlp.vim CTRLP[文件搜索]
+"let g:ctrlp_map = '<leader>c'
+let g:ctrlp_map = '<c-p>'
+let g:ctrlp_cmd = 'CtrlP'
+map <leader>f :CtrlPMRU<CR>
+map <leader>m :CtrlPMixed<CR>
+let g:ctrlp_custom_ignore = {
+    \ 'dir':  '\v[\/]\.(git|hg|svn|rvm)$',
+    \ 'file': '\v\.(exe|so|dll|zip|tar|tar.gz|pyc)$',
+    \ }
+let g:ctrlp_working_path_mode=0
+let g:ctrlp_match_window_bottom=1
+let g:ctrlp_max_height=35
+let g:ctrlp_match_window_reversed=0
+let g:ctrlp_mruf_max=500
+let g:ctrlp_follow_symlinks=1
+"let g:ctrlp_user_command = 'find %s -type f'
+let g:ctrlp_user_command = ['.git', 'cd %s && git ls-files']
+
+"Ag.vim 
+nnoremap <Leader>ag :Ag <cword><CR> 
 
 
 
