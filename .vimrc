@@ -26,12 +26,16 @@ nmap <Leader>P "+P
 " 依次遍历
 nnoremap wn <C-W><C-W>
 " 跳转至右方的窗口
+nnoremap <C-L>  <C-W>l
 nnoremap <Leader>lw <C-W>l
 " 跳转至方的窗口
+nnoremap <C-H>  <C-W>h
 nnoremap <Leader>hw <C-W>h
 " 跳转至上方的子窗口
+nnoremap <C-K>  <C-W>k
 nnoremap <Leader>kw <C-W>k
 " 跳转至下方的子窗口
+nnoremap <C-J>  <C-W>j
 nnoremap <Leader>jw <C-W>j
 
 " <<
@@ -647,6 +651,7 @@ function! Save_Session()
     execute "cclose"
     execute "MBEClose"
     execute "NERDTreeClose"
+    execute "TagbarClose"
 	execute "mksession " .  g:session_file
 	execute "wviminfo " .  g:info_file 
 endfunction
